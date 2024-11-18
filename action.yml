@@ -1,0 +1,70 @@
+# This is a placeholder action, see https://github.com/diginfra/actions/ for the Diginfra actions and examples of how to use them.
+name: Diginfra Actions
+description: See cloud cost estimates and FinOps best practices for Terraform in pull requests.
+
+author: diginfra
+branding:
+  icon: trending-up
+  color: yellow
+inputs:
+  api-key:
+    description: Your Diginfra API key. It can be retrieved by running `diginfra configure get api_key`. We recommend using your same API key in all environments. If you don't have one, download Diginfra (https://www.diginfra.github.io/docs/#quick-start) and run `diginfra auth login` to get a free API key.
+    required: true
+  path:
+    description: The path that will be passed to `diginfra breakdown`. This may be a path to a Terraform plan JSON or a Terraform project.
+    required: true
+  behavior:
+    description: The behavior to use when posting cost estimate comments. Must be one of 'update' | 'delete-and-new' | 'hide-and-new' | 'new'.
+    required: false
+    default: update
+runs:
+  using: "composite"
+  steps:
+    # Checkout the branch you want Diginfra to compare costs against, most commonly the target branch.
+    - name: Checkout base branch
+      uses: actions/checkout@v4
+      with:
+        ref: '${{ github.event.pull_request.base.ref }}'
+
+    # Install the Diginfra CLI, see https://github.com/diginfra/actions/tree/master/setup
+    # for other inputs such as version, and pricing-api-endpoint (for self-hosted users).
+    - name: Setup Diginfra
+      uses: diginfra/actions/setup@v3
+      with:
+        api-key: ${{ inputs.api_key }}
+
+    # Generate an Diginfra output JSON from the comparison branch, so that Diginfra can compare the cost difference.
+    - name: Generate Diginfra cost estimate baseline
+      shell: bash
+      run: |
+        diginfra breakdown --path=examples/terraform-directory/code \
+                            --format=json \
+                            --out-file=/tmp/diginfra-base.json
+
+
+    # Checkout the PR branch with your infrastructure changes.
+    - uses: actions/checkout@v4
+
+    - name: Run Diginfra
+      shell: bash
+      run: |
+        diginfra breakdown --path=examples/terraform-directory/code \
+                            --format=json \
+                            --compare-to=/tmp/diginfra-base.json \
+                            --out-file=/tmp/diginfra.json
+
+    - name: Post Diginfra comment
+      shell: bash
+      run: |
+        # Posts a comment to the PR using the 'update' behavior.
+        # This creates a single comment and updates it. The "quietest" option.
+        # The other valid behaviors are:
+        #   delete-and-new - Delete previous comments and create a new one.
+        #   hide-and-new - Minimize previous comments and create a new one.
+        #   new - Create a new cost estimate comment on every push.
+        # See https://www.diginfra.github.io/docs/features/cli_commands/#comment-on-pull-requests for other options.
+        diginfra comment github --path=/tmp/diginfra.json \
+                                 --repo=$GITHUB_REPOSITORY \
+                                 --github-token=${{github.token}} \
+                                 --pull-request=${{github.event.pull_request.number}} \
+                                 --behavior=${{inputs.behavior}}
