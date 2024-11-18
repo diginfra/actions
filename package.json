@@ -1,0 +1,28 @@
+{
+  "name": "diginfra-actions",
+  "description": "Diginfra GitHub Actions",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diginfra/actions.git"
+  },
+  "author": "Diginfra",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/diginfra/actions/issues"
+  },
+  "homepage": "https://github.com/diginfra/actions#readme",
+  "directories": {
+    "scripts": "scripts"
+  },
+  "scripts": {
+    "examples:generate_tests": "./scripts/generateExamplesTests.js",
+    "examples:test": "./scripts/testExamples.js",
+    "examples:update_golden": "./scripts/testExamples.js true"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5",
+    "js-yaml": "^4.1.0"
+  },
+  "dependencies": {
+  }
+}
